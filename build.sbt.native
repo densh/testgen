@@ -1,0 +1,12 @@
+sourceGenerators in Compile += Def.task {
+  testgen.TestGen.gen().map {
+    case (name, contents) =>
+      val file = (sourceManaged in Compile).value / name
+      IO.write(file, contents)
+      file
+  }
+}
+
+enablePlugins(ScalaNativePlugin)
+
+scalaVersion := "2.11.12"
