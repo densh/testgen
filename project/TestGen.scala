@@ -13,12 +13,13 @@ class Emit {
 
 object TestGen {
   type Type = String
-  type Value = String
+  type Value = Any
   type Op = String
-  type Overload = Seq[Type]
+  type UnaryOverload = (Seq[Type], (Any) => Any)
+  type BinaryOverload = (Seq[Type], (Any, Any) => Any)
   type Variant = String
 
-  val bool = "Boolean"
+  val boolean = "Boolean"
   val byte = "Byte"
   val short = "Short"
   val char = "Char"
@@ -28,835 +29,868 @@ object TestGen {
   val double = "Double"
 
   val samples = Map[Type, Seq[Value]](
-    bool -> Seq(
-      "true",
-      "false"
+    boolean -> Seq(
+      true,
+      false
     ),
     char -> Seq(
-      "java.lang.Character.MIN_VALUE",
-      "java.lang.Character.MAX_VALUE",
-      "'\\0'",
-      "'0'",
-      "' '",
-      "'1'",
-      "'ĳ'",
-      "'a'",
-      "'ᓹ'",
-      "'妍'"
+      java.lang.Character.MIN_VALUE,
+      java.lang.Character.MAX_VALUE,
+      '0',
+      ' ',
+      '1',
+      'ĳ',
+      'a',
+      'ᓹ',
+      '妍'
     ),
     byte -> Seq(
-      "java.lang.Byte.MIN_VALUE",
-      "java.lang.Byte.MAX_VALUE",
-      "0",
-      "1",
-      "81",
-      "101",
-      "120",
-      "-1",
-      "-99",
-      "-114",
-      "-124"
+      java.lang.Byte.MIN_VALUE,
+      java.lang.Byte.MAX_VALUE,
+      0.toByte,
+      1.toByte,
+      81.toByte,
+      101.toByte,
+      120.toByte,
+      -1.toByte,
+      -99.toByte,
+      -114.toByte,
+      -124.toByte
     ),
     short -> Seq(
-      "java.lang.Short.MIN_VALUE",
-      "java.lang.Short.MAX_VALUE",
-      "0",
-      "1",
-      "84",
-      "7410",
-      "16132",
-      "-1",
-      "-73",
-      "-1162",
-      "-18090"
+      java.lang.Short.MIN_VALUE,
+      java.lang.Short.MAX_VALUE,
+      0.toShort,
+      1.toShort,
+      84.toShort,
+      7410.toShort,
+      16132.toShort,
+      -1.toShort,
+      -73.toShort,
+      -1162.toShort,
+      -18090.toShort
     ),
     int -> Seq(
-      "java.lang.Integer.MIN_VALUE",
-      "java.lang.Integer.MAX_VALUE",
-      "0",
-      "1",
-      "702460",
-      "275434658",
-      "1270029521",
-      "-1",
-      "-749990",
-      "-186748006",
-      "-1588499300"
+      java.lang.Integer.MIN_VALUE,
+      java.lang.Integer.MAX_VALUE,
+      0,
+      1,
+      702460,
+      275434658,
+      1270029521,
+      -1,
+      -749990,
+      -186748006,
+      -1588499300
     ),
     long -> Seq(
-      "java.lang.Long.MIN_VALUE",
-      "java.lang.Long.MAX_VALUE",
-      "0L",
-      "1L",
-      "1412906027847L",
-      "70424924662051552L",
-      "2626308222543888459L",
-      "-1L",
-      "-8799231824L",
-      "-4746701162271676L",
-      "-2201690882079163160L"
+      java.lang.Long.MIN_VALUE,
+      java.lang.Long.MAX_VALUE,
+      0L,
+      1L,
+      1412906027847L,
+      70424924662051552L,
+      2626308222543888459L,
+      -1L,
+      -8799231824L,
+      -4746701162271676L,
+      -2201690882079163160L
     ),
     float -> Seq(
-      "java.lang.Float.MIN_VALUE",
-      "java.lang.Float.MAX_VALUE",
-      "0F",
-      "1F",
-      "0.50380343F",
-      "3.3229107F",
-      "718.87374F",
-      "67186.71F",
-      "-1F",
-      "-0.9160936F",
-      "-8.0150115F",
-      "-216.69602F",
-      "-38777.608F"
+      java.lang.Float.MIN_VALUE,
+      java.lang.Float.MAX_VALUE,
+      java.lang.Float.NaN,
+      java.lang.Float.NEGATIVE_INFINITY,
+      java.lang.Float.POSITIVE_INFINITY,
+      0F,
+      1F,
+      0.50380343F,
+      3.3229107F,
+      718.87374F,
+      67186.71F,
+      -1F,
+      -0.9160936F,
+      -8.0150115F,
+      -216.69602F,
+      -38777.608F
     ),
     double -> Seq(
-      "java.lang.Double.MIN_VALUE",
-      "java.lang.Double.MAX_VALUE",
-      "0D",
-      "1D",
-      "0.5936403795646567D",
-      "986.759726442125D",
-      "514475.6134971429D",
-      "-1D",
-      "-0.3222548099938489D",
-      "-3721.6239394538553D",
-      "-824639695.7818043D"
+      java.lang.Double.MIN_VALUE,
+      java.lang.Double.MAX_VALUE,
+      java.lang.Double.NaN,
+      java.lang.Double.NEGATIVE_INFINITY,
+      java.lang.Double.POSITIVE_INFINITY,
+      0D,
+      1D,
+      0.5936403795646567D,
+      986.759726442125D,
+      514475.6134971429D,
+      -1D,
+      -0.3222548099938489D,
+      -3721.6239394538553D,
+      -824639695.7818043D
     )
   )
 
-  val zeros = Set(
-    "java.lang.Character.MIN_VALUE",
-    "'\\0'",
-    "0",
-    "0L",
-    "0F",
-    "0D"
+  // val convOps = {
+  //   val overloads =
+  //     Seq(byte, short, char, int, long, double).foreach {
+  //       Seq(byte, short, char, int, long, double).foreach {
+  //       }
+  //     }
+  // }
+
+  val opNames = Map[String, String](
+    ("unary_!", "Not"),
+    ("unary_~", "BitwiseNot") ,
+    ("unary_-", "Neg"),
+    ("unary_+", "UnaryAdd"),
+    ("_+", "Unmodified"),
+    ("*", "Multiply"),
+    ("<=", "LessThanOrEqual"),
+    ("%", "Modulo"),
+    ("<", "LessThan"),
+    ("&", "BitwiseAnd"),
+    ("<<", "ShiftLeft"),
+    ("||", "Or"),
+    (">=", "GreaterThanOrEqual"),
+    ("|", "BitwiseOr"),
+    (">>", "ArithmeticShiftRight"),
+    ("-", "Substract"),
+    (">>>", "LogicalShiftRight"),
+    ("==", "Equals"),
+    ("+", "Add"),
+    ("&&", "And"),
+    ("^", "BitwiseXor"),
+    ("/", "Divide"),
+    (">", "Greater"),
+    ("!=", "NotEquals")
   )
 
-  def isDiv(op: Op): Boolean =
-    op == "%" || op == "/"
-
-  def isZero(value: Value): Boolean =
-    zeros.contains(value)
-
-  val ops = Map[Op, Seq[Overload]](
+  val unaryOps = Map[Op, Seq[UnaryOverload]](
     "unary_!" -> Seq(
-      Seq(bool, bool)
+      (Seq(boolean, boolean), ((x: Boolean) => x.unary_!).asInstanceOf[Any => Any])
     ),
     "unary_~" -> Seq(
-      Seq(byte, int),
-      Seq(short, int),
-      Seq(char, int),
-      Seq(int, int)
+      (Seq(byte, int), ((x: Byte) => x.unary_~).asInstanceOf[Any => Any]),
+      (Seq(short, int), ((x: Short) => x.unary_~).asInstanceOf[Any => Any]),
+      (Seq(char, int), ((x: Char) => x.unary_~).asInstanceOf[Any => Any]),
+      (Seq(int, int), ((x: Int) => x.unary_~).asInstanceOf[Any => Any]),
+      (Seq(long, long), ((x: Long) => x.unary_~).asInstanceOf[Any => Any])
     ),
     "unary_+" -> Seq(
-      Seq(byte, int),
-      Seq(short, int),
-      Seq(char, int),
-      Seq(int, int),
-      Seq(float, float),
-      Seq(double, double)
+      (Seq(byte, int), ((x: Byte) => x.unary_+).asInstanceOf[Any => Any]),
+      (Seq(short, int), ((x: Short) => x.unary_+).asInstanceOf[Any => Any]),
+      (Seq(char, int), ((x: Char) => x.unary_+).asInstanceOf[Any => Any]),
+      (Seq(int, int), ((x: Int) => x.unary_+).asInstanceOf[Any => Any]),
+      (Seq(float, float), ((x: Float) => x.unary_+).asInstanceOf[Any => Any]),
+      (Seq(double, double), ((x: Double) => x.unary_+).asInstanceOf[Any => Any])
     ),
     "unary_-" -> Seq(
-      Seq(byte, int),
-      Seq(short, int),
-      Seq(char, int),
-      Seq(int, int),
-      Seq(float, float),
-      Seq(double, double)
-    ),
-    "==" -> Seq(
-      Seq(bool, bool, bool),
-      Seq(byte, byte, bool),
-      Seq(byte, short, bool),
-      Seq(byte, char, bool),
-      Seq(byte, int, bool),
-      Seq(byte, long, bool),
-      Seq(byte, float, bool),
-      Seq(byte, double, bool),
-      Seq(short, byte, bool),
-      Seq(short, short, bool),
-      Seq(short, char, bool),
-      Seq(short, int, bool),
-      Seq(short, long, bool),
-      Seq(short, float, bool),
-      Seq(short, double, bool),
-      Seq(char, byte, bool),
-      Seq(char, short, bool),
-      Seq(char, char, bool),
-      Seq(char, int, bool),
-      Seq(char, long, bool),
-      Seq(char, float, bool),
-      Seq(char, double, bool),
-      Seq(int, byte, bool),
-      Seq(int, short, bool),
-      Seq(int, char, bool),
-      Seq(int, int, bool),
-      Seq(int, long, bool),
-      Seq(int, float, bool),
-      Seq(int, double, bool),
-      Seq(long, byte, bool),
-      Seq(long, short, bool),
-      Seq(long, char, bool),
-      Seq(long, int, bool),
-      Seq(long, long, bool),
-      Seq(long, float, bool),
-      Seq(long, double, bool),
-      Seq(float, byte, bool),
-      Seq(float, short, bool),
-      Seq(float, char, bool),
-      Seq(float, int, bool),
-      Seq(float, long, bool),
-      Seq(float, float, bool),
-      Seq(float, double, bool),
-      Seq(double, byte, bool),
-      Seq(double, short, bool),
-      Seq(double, char, bool),
-      Seq(double, int, bool),
-      Seq(double, long, bool),
-      Seq(double, float, bool),
-      Seq(double, double, bool)
-    ),
-    "!=" -> Seq(
-      Seq(bool, bool, bool),
-      Seq(byte, byte, bool),
-      Seq(byte, short, bool),
-      Seq(byte, char, bool),
-      Seq(byte, int, bool),
-      Seq(byte, long, bool),
-      Seq(byte, float, bool),
-      Seq(byte, double, bool),
-      Seq(short, byte, bool),
-      Seq(short, short, bool),
-      Seq(short, char, bool),
-      Seq(short, int, bool),
-      Seq(short, long, bool),
-      Seq(short, float, bool),
-      Seq(short, double, bool),
-      Seq(char, byte, bool),
-      Seq(char, short, bool),
-      Seq(char, char, bool),
-      Seq(char, int, bool),
-      Seq(char, long, bool),
-      Seq(char, float, bool),
-      Seq(char, double, bool),
-      Seq(int, byte, bool),
-      Seq(int, short, bool),
-      Seq(int, char, bool),
-      Seq(int, int, bool),
-      Seq(int, long, bool),
-      Seq(int, float, bool),
-      Seq(int, double, bool),
-      Seq(long, byte, bool),
-      Seq(long, short, bool),
-      Seq(long, char, bool),
-      Seq(long, int, bool),
-      Seq(long, long, bool),
-      Seq(long, float, bool),
-      Seq(long, double, bool),
-      Seq(float, byte, bool),
-      Seq(float, short, bool),
-      Seq(float, char, bool),
-      Seq(float, int, bool),
-      Seq(float, long, bool),
-      Seq(float, float, bool),
-      Seq(float, double, bool),
-      Seq(double, byte, bool),
-      Seq(double, short, bool),
-      Seq(double, char, bool),
-      Seq(double, int, bool),
-      Seq(double, long, bool),
-      Seq(double, float, bool),
-      Seq(double, double, bool)
-    ),
-    "<" -> Seq(
-      Seq(byte, byte, bool),
-      Seq(byte, short, bool),
-      Seq(byte, char, bool),
-      Seq(byte, int, bool),
-      Seq(byte, long, bool),
-      Seq(byte, float, bool),
-      Seq(byte, double, bool),
-      Seq(short, byte, bool),
-      Seq(short, short, bool),
-      Seq(short, char, bool),
-      Seq(short, int, bool),
-      Seq(short, long, bool),
-      Seq(short, float, bool),
-      Seq(short, double, bool),
-      Seq(char, byte, bool),
-      Seq(char, short, bool),
-      Seq(char, char, bool),
-      Seq(char, int, bool),
-      Seq(char, long, bool),
-      Seq(char, float, bool),
-      Seq(char, double, bool),
-      Seq(int, byte, bool),
-      Seq(int, short, bool),
-      Seq(int, char, bool),
-      Seq(int, int, bool),
-      Seq(int, long, bool),
-      Seq(int, float, bool),
-      Seq(int, double, bool),
-      Seq(long, byte, bool),
-      Seq(long, short, bool),
-      Seq(long, char, bool),
-      Seq(long, int, bool),
-      Seq(long, long, bool),
-      Seq(long, float, bool),
-      Seq(long, double, bool),
-      Seq(float, byte, bool),
-      Seq(float, short, bool),
-      Seq(float, char, bool),
-      Seq(float, int, bool),
-      Seq(float, long, bool),
-      Seq(float, float, bool),
-      Seq(float, double, bool),
-      Seq(double, byte, bool),
-      Seq(double, short, bool),
-      Seq(double, char, bool),
-      Seq(double, int, bool),
-      Seq(double, long, bool),
-      Seq(double, float, bool),
-      Seq(double, double, bool)
-    ),
-    "<=" -> Seq(
-      Seq(byte, byte, bool),
-      Seq(byte, short, bool),
-      Seq(byte, char, bool),
-      Seq(byte, int, bool),
-      Seq(byte, long, bool),
-      Seq(byte, float, bool),
-      Seq(byte, double, bool),
-      Seq(short, byte, bool),
-      Seq(short, short, bool),
-      Seq(short, char, bool),
-      Seq(short, int, bool),
-      Seq(short, long, bool),
-      Seq(short, float, bool),
-      Seq(short, double, bool),
-      Seq(char, byte, bool),
-      Seq(char, short, bool),
-      Seq(char, char, bool),
-      Seq(char, int, bool),
-      Seq(char, long, bool),
-      Seq(char, float, bool),
-      Seq(char, double, bool),
-      Seq(int, byte, bool),
-      Seq(int, short, bool),
-      Seq(int, char, bool),
-      Seq(int, int, bool),
-      Seq(int, long, bool),
-      Seq(int, float, bool),
-      Seq(int, double, bool),
-      Seq(long, byte, bool),
-      Seq(long, short, bool),
-      Seq(long, char, bool),
-      Seq(long, int, bool),
-      Seq(long, long, bool),
-      Seq(long, float, bool),
-      Seq(long, double, bool),
-      Seq(float, byte, bool),
-      Seq(float, short, bool),
-      Seq(float, char, bool),
-      Seq(float, int, bool),
-      Seq(float, long, bool),
-      Seq(float, float, bool),
-      Seq(float, double, bool),
-      Seq(double, byte, bool),
-      Seq(double, short, bool),
-      Seq(double, char, bool),
-      Seq(double, int, bool),
-      Seq(double, long, bool),
-      Seq(double, float, bool),
-      Seq(double, double, bool)
-    ),
-    ">" -> Seq(
-      Seq(byte, byte, bool),
-      Seq(byte, short, bool),
-      Seq(byte, char, bool),
-      Seq(byte, int, bool),
-      Seq(byte, long, bool),
-      Seq(byte, float, bool),
-      Seq(byte, double, bool),
-      Seq(short, byte, bool),
-      Seq(short, short, bool),
-      Seq(short, char, bool),
-      Seq(short, int, bool),
-      Seq(short, long, bool),
-      Seq(short, float, bool),
-      Seq(short, double, bool),
-      Seq(char, byte, bool),
-      Seq(char, short, bool),
-      Seq(char, char, bool),
-      Seq(char, int, bool),
-      Seq(char, long, bool),
-      Seq(char, float, bool),
-      Seq(char, double, bool),
-      Seq(int, byte, bool),
-      Seq(int, short, bool),
-      Seq(int, char, bool),
-      Seq(int, int, bool),
-      Seq(int, long, bool),
-      Seq(int, float, bool),
-      Seq(int, double, bool),
-      Seq(long, byte, bool),
-      Seq(long, short, bool),
-      Seq(long, char, bool),
-      Seq(long, int, bool),
-      Seq(long, long, bool),
-      Seq(long, float, bool),
-      Seq(long, double, bool),
-      Seq(float, byte, bool),
-      Seq(float, short, bool),
-      Seq(float, char, bool),
-      Seq(float, int, bool),
-      Seq(float, long, bool),
-      Seq(float, float, bool),
-      Seq(float, double, bool),
-      Seq(double, byte, bool),
-      Seq(double, short, bool),
-      Seq(double, char, bool),
-      Seq(double, int, bool),
-      Seq(double, long, bool),
-      Seq(double, float, bool),
-      Seq(double, double, bool)
-    ),
-    ">=" -> Seq(
-      Seq(byte, byte, bool),
-      Seq(byte, short, bool),
-      Seq(byte, char, bool),
-      Seq(byte, int, bool),
-      Seq(byte, long, bool),
-      Seq(byte, float, bool),
-      Seq(byte, double, bool),
-      Seq(short, byte, bool),
-      Seq(short, short, bool),
-      Seq(short, char, bool),
-      Seq(short, int, bool),
-      Seq(short, long, bool),
-      Seq(short, float, bool),
-      Seq(short, double, bool),
-      Seq(char, byte, bool),
-      Seq(char, short, bool),
-      Seq(char, char, bool),
-      Seq(char, int, bool),
-      Seq(char, long, bool),
-      Seq(char, float, bool),
-      Seq(char, double, bool),
-      Seq(int, byte, bool),
-      Seq(int, short, bool),
-      Seq(int, char, bool),
-      Seq(int, int, bool),
-      Seq(int, long, bool),
-      Seq(int, float, bool),
-      Seq(int, double, bool),
-      Seq(long, byte, bool),
-      Seq(long, short, bool),
-      Seq(long, char, bool),
-      Seq(long, int, bool),
-      Seq(long, long, bool),
-      Seq(long, float, bool),
-      Seq(long, double, bool),
-      Seq(float, byte, bool),
-      Seq(float, short, bool),
-      Seq(float, char, bool),
-      Seq(float, int, bool),
-      Seq(float, long, bool),
-      Seq(float, float, bool),
-      Seq(float, double, bool),
-      Seq(double, byte, bool),
-      Seq(double, short, bool),
-      Seq(double, char, bool),
-      Seq(double, int, bool),
-      Seq(double, long, bool),
-      Seq(double, float, bool),
-      Seq(double, double, bool)
-    ),
-    "||" -> Seq(
-      Seq(bool, bool, bool)
-    ),
-    "&&" -> Seq(
-      Seq(bool, bool, bool)
-    ),
-    "|" -> Seq(
-      Seq(bool, bool, bool),
-      Seq(byte, byte, int),
-      Seq(byte, short, int),
-      Seq(byte, char, int),
-      Seq(byte, int, int),
-      Seq(byte, long, long),
-      Seq(short, byte, int),
-      Seq(short, short, int),
-      Seq(short, char, int),
-      Seq(short, int, int),
-      Seq(short, long, long),
-      Seq(char, byte, int),
-      Seq(char, short, int),
-      Seq(char, char, int),
-      Seq(char, int, int),
-      Seq(char, long, long),
-      Seq(int, byte, int),
-      Seq(int, short, int),
-      Seq(int, char, int),
-      Seq(int, int, int),
-      Seq(int, long, long),
-      Seq(long, byte, long),
-      Seq(long, short, long),
-      Seq(long, char, long),
-      Seq(long, int, long),
-      Seq(long, long, long)
-    ),
-    "&" -> Seq(
-      Seq(bool, bool, bool),
-      Seq(byte, byte, int),
-      Seq(byte, short, int),
-      Seq(byte, char, int),
-      Seq(byte, int, int),
-      Seq(byte, long, long),
-      Seq(short, byte, int),
-      Seq(short, short, int),
-      Seq(short, char, int),
-      Seq(short, int, int),
-      Seq(short, long, long),
-      Seq(char, byte, int),
-      Seq(char, short, int),
-      Seq(char, char, int),
-      Seq(char, int, int),
-      Seq(char, long, long),
-      Seq(int, byte, int),
-      Seq(int, short, int),
-      Seq(int, char, int),
-      Seq(int, int, int),
-      Seq(int, long, long),
-      Seq(long, byte, long),
-      Seq(long, short, long),
-      Seq(long, char, long),
-      Seq(long, int, long),
-      Seq(long, long, long)
-    ),
-    "^" -> Seq(
-      Seq(bool, bool, bool),
-      Seq(byte, byte, int),
-      Seq(byte, short, int),
-      Seq(byte, char, int),
-      Seq(byte, int, int),
-      Seq(byte, long, long),
-      Seq(short, byte, int),
-      Seq(short, short, int),
-      Seq(short, char, int),
-      Seq(short, int, int),
-      Seq(short, long, long),
-      Seq(char, byte, int),
-      Seq(char, short, int),
-      Seq(char, char, int),
-      Seq(char, int, int),
-      Seq(char, long, long),
-      Seq(int, byte, int),
-      Seq(int, short, int),
-      Seq(int, char, int),
-      Seq(int, int, int),
-      Seq(int, long, long),
-      Seq(long, byte, long),
-      Seq(long, short, long),
-      Seq(long, char, long),
-      Seq(long, int, long),
-      Seq(long, long, long)
-    ),
-    "<<" -> Seq(
-      Seq(byte, int, int),
-      Seq(byte, long, int),
-      Seq(short, int, int),
-      Seq(short, long, int),
-      Seq(char, int, int),
-      Seq(char, long, int),
-      Seq(int, int, int),
-      Seq(int, long, int),
-      Seq(long, int, long),
-      Seq(long, long, long)
-    ),
-    ">>>" -> Seq(
-      Seq(byte, int, int),
-      Seq(byte, long, int),
-      Seq(short, int, int),
-      Seq(short, long, int),
-      Seq(char, int, int),
-      Seq(char, long, int),
-      Seq(int, int, int),
-      Seq(int, long, int),
-      Seq(long, int, long),
-      Seq(long, long, long)
-    ),
-    ">>" -> Seq(
-      Seq(byte, int, int),
-      Seq(byte, long, int),
-      Seq(short, int, int),
-      Seq(short, long, int),
-      Seq(char, int, int),
-      Seq(char, long, int),
-      Seq(int, int, int),
-      Seq(int, long, int),
-      Seq(long, int, long),
-      Seq(long, long, long)
-    ),
-    "+" -> Seq(
-      Seq(byte, byte, int),
-      Seq(byte, short, int),
-      Seq(byte, char, int),
-      Seq(byte, int, int),
-      Seq(byte, long, long),
-      Seq(byte, float, float),
-      Seq(byte, double, double),
-      Seq(short, byte, int),
-      Seq(short, short, int),
-      Seq(short, char, int),
-      Seq(short, int, int),
-      Seq(short, long, long),
-      Seq(short, float, float),
-      Seq(short, double, double),
-      Seq(char, byte, int),
-      Seq(char, short, int),
-      Seq(char, char, int),
-      Seq(char, int, int),
-      Seq(char, long, long),
-      Seq(char, float, float),
-      Seq(char, double, double),
-      Seq(int, byte, int),
-      Seq(int, short, int),
-      Seq(int, char, int),
-      Seq(int, int, int),
-      Seq(int, long, long),
-      Seq(int, float, float),
-      Seq(int, double, double),
-      Seq(long, byte, long),
-      Seq(long, short, long),
-      Seq(long, char, long),
-      Seq(long, int, long),
-      Seq(long, long, long),
-      Seq(long, float, float),
-      Seq(long, double, double),
-      Seq(float, byte, float),
-      Seq(float, short, float),
-      Seq(float, char, float),
-      Seq(float, int, float),
-      Seq(float, long, float),
-      Seq(float, float, float),
-      Seq(float, double, double),
-      Seq(double, byte, double),
-      Seq(double, short, double),
-      Seq(double, char, double),
-      Seq(double, int, double),
-      Seq(double, long, double),
-      Seq(double, float, double),
-      Seq(double, double, double)
-    ),
-    "-" -> Seq(
-      Seq(byte, byte, int),
-      Seq(byte, short, int),
-      Seq(byte, char, int),
-      Seq(byte, int, int),
-      Seq(byte, long, long),
-      Seq(byte, float, float),
-      Seq(byte, double, double),
-      Seq(short, byte, int),
-      Seq(short, short, int),
-      Seq(short, char, int),
-      Seq(short, int, int),
-      Seq(short, long, long),
-      Seq(short, float, float),
-      Seq(short, double, double),
-      Seq(char, byte, int),
-      Seq(char, short, int),
-      Seq(char, char, int),
-      Seq(char, int, int),
-      Seq(char, long, long),
-      Seq(char, float, float),
-      Seq(char, double, double),
-      Seq(int, byte, int),
-      Seq(int, short, int),
-      Seq(int, char, int),
-      Seq(int, int, int),
-      Seq(int, long, long),
-      Seq(int, float, float),
-      Seq(int, double, double),
-      Seq(long, byte, long),
-      Seq(long, short, long),
-      Seq(long, char, long),
-      Seq(long, int, long),
-      Seq(long, long, long),
-      Seq(long, float, float),
-      Seq(long, double, double),
-      Seq(float, byte, float),
-      Seq(float, short, float),
-      Seq(float, char, float),
-      Seq(float, int, float),
-      Seq(float, long, float),
-      Seq(float, float, float),
-      Seq(float, double, double),
-      Seq(double, byte, double),
-      Seq(double, short, double),
-      Seq(double, char, double),
-      Seq(double, int, double),
-      Seq(double, long, double),
-      Seq(double, float, double),
-      Seq(double, double, double)
-    ),
-    "*" -> Seq(
-      Seq(byte, byte, int),
-      Seq(byte, short, int),
-      Seq(byte, char, int),
-      Seq(byte, int, int),
-      Seq(byte, long, long),
-      Seq(byte, float, float),
-      Seq(byte, double, double),
-      Seq(short, byte, int),
-      Seq(short, short, int),
-      Seq(short, char, int),
-      Seq(short, int, int),
-      Seq(short, long, long),
-      Seq(short, float, float),
-      Seq(short, double, double),
-      Seq(char, byte, int),
-      Seq(char, short, int),
-      Seq(char, char, int),
-      Seq(char, int, int),
-      Seq(char, long, long),
-      Seq(char, float, float),
-      Seq(char, double, double),
-      Seq(int, byte, int),
-      Seq(int, short, int),
-      Seq(int, char, int),
-      Seq(int, int, int),
-      Seq(int, long, long),
-      Seq(int, float, float),
-      Seq(int, double, double),
-      Seq(long, byte, long),
-      Seq(long, short, long),
-      Seq(long, char, long),
-      Seq(long, int, long),
-      Seq(long, long, long),
-      Seq(long, float, float),
-      Seq(long, double, double),
-      Seq(float, byte, float),
-      Seq(float, short, float),
-      Seq(float, char, float),
-      Seq(float, int, float),
-      Seq(float, long, float),
-      Seq(float, float, float),
-      Seq(float, double, double),
-      Seq(double, byte, double),
-      Seq(double, short, double),
-      Seq(double, char, double),
-      Seq(double, int, double),
-      Seq(double, long, double),
-      Seq(double, float, double),
-      Seq(double, double, double)
-    ),
-    "/" -> Seq(
-      Seq(byte, byte, int),
-      Seq(byte, short, int),
-      Seq(byte, char, int),
-      Seq(byte, int, int),
-      Seq(byte, long, long),
-      Seq(byte, float, float),
-      Seq(byte, double, double),
-      Seq(short, byte, int),
-      Seq(short, short, int),
-      Seq(short, char, int),
-      Seq(short, int, int),
-      Seq(short, long, long),
-      Seq(short, float, float),
-      Seq(short, double, double),
-      Seq(char, byte, int),
-      Seq(char, short, int),
-      Seq(char, char, int),
-      Seq(char, int, int),
-      Seq(char, long, long),
-      Seq(char, float, float),
-      Seq(char, double, double),
-      Seq(int, byte, int),
-      Seq(int, short, int),
-      Seq(int, char, int),
-      Seq(int, int, int),
-      Seq(int, long, long),
-      Seq(int, float, float),
-      Seq(int, double, double),
-      Seq(long, byte, long),
-      Seq(long, short, long),
-      Seq(long, char, long),
-      Seq(long, int, long),
-      Seq(long, long, long),
-      Seq(long, float, float),
-      Seq(long, double, double),
-      Seq(float, byte, float),
-      Seq(float, short, float),
-      Seq(float, char, float),
-      Seq(float, int, float),
-      Seq(float, long, float),
-      Seq(float, float, float),
-      Seq(float, double, double),
-      Seq(double, byte, double),
-      Seq(double, short, double),
-      Seq(double, char, double),
-      Seq(double, int, double),
-      Seq(double, long, double),
-      Seq(double, float, double),
-      Seq(double, double, double)
-    ),
-    "%" -> Seq(
-      Seq(byte, byte, int),
-      Seq(byte, short, int),
-      Seq(byte, char, int),
-      Seq(byte, int, int),
-      Seq(byte, long, long),
-      Seq(byte, float, float),
-      Seq(byte, double, double),
-      Seq(short, byte, int),
-      Seq(short, short, int),
-      Seq(short, char, int),
-      Seq(short, int, int),
-      Seq(short, long, long),
-      Seq(short, float, float),
-      Seq(short, double, double),
-      Seq(char, byte, int),
-      Seq(char, short, int),
-      Seq(char, char, int),
-      Seq(char, int, int),
-      Seq(char, long, long),
-      Seq(char, float, float),
-      Seq(char, double, double),
-      Seq(int, byte, int),
-      Seq(int, short, int),
-      Seq(int, char, int),
-      Seq(int, int, int),
-      Seq(int, long, long),
-      Seq(int, float, float),
-      Seq(int, double, double),
-      Seq(long, byte, long),
-      Seq(long, short, long),
-      Seq(long, char, long),
-      Seq(long, int, long),
-      Seq(long, long, long),
-      Seq(long, float, float),
-      Seq(long, double, double),
-      Seq(float, byte, float),
-      Seq(float, short, float),
-      Seq(float, char, float),
-      Seq(float, int, float),
-      Seq(float, long, float),
-      Seq(float, float, float),
-      Seq(float, double, double),
-      Seq(double, byte, double),
-      Seq(double, short, double),
-      Seq(double, char, double),
-      Seq(double, int, double),
-      Seq(double, long, double),
-      Seq(double, float, double),
-      Seq(double, double, double)
+      (Seq(byte, int), ((x: Byte) => x.unary_-).asInstanceOf[Any => Any]),
+      (Seq(short, int), ((x: Short) => x.unary_-).asInstanceOf[Any => Any]),
+      (Seq(char, int), ((x: Char) => x.unary_-).asInstanceOf[Any => Any]),
+      (Seq(int, int), ((x: Int) => x.unary_-).asInstanceOf[Any => Any]),
+      (Seq(float, float), ((x: Float) => x.unary_-).asInstanceOf[Any => Any]),
+      (Seq(double, double), ((x: Double) => x.unary_-).asInstanceOf[Any => Any])
     )
   )
+
+  val binaryOps = Map[Op, Seq[BinaryOverload]](
+    "*" -> Seq(
+      (Seq(byte, byte, int), ((x: Byte, y: Byte) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, int), ((x: Byte, y: Short) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, int), ((x: Byte, y: Char) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, long), ((x: Byte, y: Long) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, float), ((x: Byte, y: Float) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, double), ((x: Byte, y: Double) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, int), ((x: Short, y: Byte) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, int), ((x: Short, y: Short) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, int), ((x: Short, y: Char) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, long), ((x: Short, y: Long) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, float), ((x: Short, y: Float) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, double), ((x: Short, y: Double) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, int), ((x: Char, y: Byte) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, int), ((x: Char, y: Short) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, int), ((x: Char, y: Char) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, long), ((x: Char, y: Long) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, float), ((x: Char, y: Float) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, double), ((x: Char, y: Double) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, int), ((x: Int, y: Byte) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, int), ((x: Int, y: Short) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, int), ((x: Int, y: Char) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, long), ((x: Int, y: Long) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, float), ((x: Int, y: Float) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, double), ((x: Int, y: Double) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, long), ((x: Long, y: Byte) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, long), ((x: Long, y: Short) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, long), ((x: Long, y: Char) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, float), ((x: Long, y: Float) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, double), ((x: Long, y: Double) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, float), ((x: Float, y: Byte) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, float), ((x: Float, y: Short) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, float), ((x: Float, y: Char) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, float), ((x: Float, y: Int) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, float), ((x: Float, y: Long) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, float), ((x: Float, y: Float) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, double), ((x: Float, y: Double) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, double), ((x: Double, y: Byte) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, double), ((x: Double, y: Short) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, double), ((x: Double, y: Char) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, double), ((x: Double, y: Int) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, double), ((x: Double, y: Long) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, double), ((x: Double, y: Float) => x * y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, double), ((x: Double, y: Double) => x * y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "<=" -> Seq(
+      (Seq(byte, byte, boolean), ((x: Byte, y: Byte) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, boolean), ((x: Byte, y: Short) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, boolean), ((x: Byte, y: Char) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, boolean), ((x: Byte, y: Int) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, boolean), ((x: Byte, y: Long) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, boolean), ((x: Byte, y: Float) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, boolean), ((x: Byte, y: Double) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, boolean), ((x: Short, y: Byte) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, boolean), ((x: Short, y: Short) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, boolean), ((x: Short, y: Char) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, boolean), ((x: Short, y: Int) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, boolean), ((x: Short, y: Long) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, boolean), ((x: Short, y: Float) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, boolean), ((x: Short, y: Double) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, boolean), ((x: Char, y: Byte) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, boolean), ((x: Char, y: Short) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, boolean), ((x: Char, y: Char) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, boolean), ((x: Char, y: Int) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, boolean), ((x: Char, y: Long) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, boolean), ((x: Char, y: Float) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, boolean), ((x: Char, y: Double) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, boolean), ((x: Int, y: Byte) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, boolean), ((x: Int, y: Short) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, boolean), ((x: Int, y: Char) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, boolean), ((x: Int, y: Int) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, boolean), ((x: Int, y: Long) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, boolean), ((x: Int, y: Float) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, boolean), ((x: Int, y: Double) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, boolean), ((x: Long, y: Byte) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, boolean), ((x: Long, y: Short) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, boolean), ((x: Long, y: Char) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, boolean), ((x: Long, y: Int) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, boolean), ((x: Long, y: Long) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, boolean), ((x: Long, y: Float) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, boolean), ((x: Long, y: Double) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, boolean), ((x: Float, y: Byte) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, boolean), ((x: Float, y: Short) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, boolean), ((x: Float, y: Char) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, boolean), ((x: Float, y: Int) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, boolean), ((x: Float, y: Long) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, boolean), ((x: Float, y: Float) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, boolean), ((x: Float, y: Double) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, boolean), ((x: Double, y: Byte) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, boolean), ((x: Double, y: Short) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, boolean), ((x: Double, y: Char) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, boolean), ((x: Double, y: Int) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, boolean), ((x: Double, y: Long) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, boolean), ((x: Double, y: Float) => x <= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, boolean), ((x: Double, y: Double) => x <= y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "%" -> Seq(
+      (Seq(byte, byte, int), ((x: Byte, y: Byte) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, int), ((x: Byte, y: Short) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, int), ((x: Byte, y: Char) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, long), ((x: Byte, y: Long) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, float), ((x: Byte, y: Float) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, double), ((x: Byte, y: Double) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, int), ((x: Short, y: Byte) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, int), ((x: Short, y: Short) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, int), ((x: Short, y: Char) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, long), ((x: Short, y: Long) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, float), ((x: Short, y: Float) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, double), ((x: Short, y: Double) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, int), ((x: Char, y: Byte) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, int), ((x: Char, y: Short) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, int), ((x: Char, y: Char) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, long), ((x: Char, y: Long) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, float), ((x: Char, y: Float) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, double), ((x: Char, y: Double) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, int), ((x: Int, y: Byte) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, int), ((x: Int, y: Short) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, int), ((x: Int, y: Char) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, long), ((x: Int, y: Long) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, float), ((x: Int, y: Float) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, double), ((x: Int, y: Double) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, long), ((x: Long, y: Byte) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, long), ((x: Long, y: Short) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, long), ((x: Long, y: Char) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, float), ((x: Long, y: Float) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, double), ((x: Long, y: Double) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, float), ((x: Float, y: Byte) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, float), ((x: Float, y: Short) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, float), ((x: Float, y: Char) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, float), ((x: Float, y: Int) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, float), ((x: Float, y: Long) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, float), ((x: Float, y: Float) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, double), ((x: Float, y: Double) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, double), ((x: Double, y: Byte) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, double), ((x: Double, y: Short) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, double), ((x: Double, y: Char) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, double), ((x: Double, y: Int) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, double), ((x: Double, y: Long) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, double), ((x: Double, y: Float) => x % y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, double), ((x: Double, y: Double) => x % y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "<" -> Seq(
+      (Seq(byte, byte, boolean), ((x: Byte, y: Byte) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, boolean), ((x: Byte, y: Short) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, boolean), ((x: Byte, y: Char) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, boolean), ((x: Byte, y: Int) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, boolean), ((x: Byte, y: Long) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, boolean), ((x: Byte, y: Float) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, boolean), ((x: Byte, y: Double) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, boolean), ((x: Short, y: Byte) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, boolean), ((x: Short, y: Short) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, boolean), ((x: Short, y: Char) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, boolean), ((x: Short, y: Int) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, boolean), ((x: Short, y: Long) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, boolean), ((x: Short, y: Float) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, boolean), ((x: Short, y: Double) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, boolean), ((x: Char, y: Byte) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, boolean), ((x: Char, y: Short) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, boolean), ((x: Char, y: Char) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, boolean), ((x: Char, y: Int) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, boolean), ((x: Char, y: Long) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, boolean), ((x: Char, y: Float) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, boolean), ((x: Char, y: Double) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, boolean), ((x: Int, y: Byte) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, boolean), ((x: Int, y: Short) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, boolean), ((x: Int, y: Char) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, boolean), ((x: Int, y: Int) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, boolean), ((x: Int, y: Long) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, boolean), ((x: Int, y: Float) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, boolean), ((x: Int, y: Double) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, boolean), ((x: Long, y: Byte) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, boolean), ((x: Long, y: Short) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, boolean), ((x: Long, y: Char) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, boolean), ((x: Long, y: Int) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, boolean), ((x: Long, y: Long) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, boolean), ((x: Long, y: Float) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, boolean), ((x: Long, y: Double) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, boolean), ((x: Float, y: Byte) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, boolean), ((x: Float, y: Short) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, boolean), ((x: Float, y: Char) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, boolean), ((x: Float, y: Int) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, boolean), ((x: Float, y: Long) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, boolean), ((x: Float, y: Float) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, boolean), ((x: Float, y: Double) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, boolean), ((x: Double, y: Byte) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, boolean), ((x: Double, y: Short) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, boolean), ((x: Double, y: Char) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, boolean), ((x: Double, y: Int) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, boolean), ((x: Double, y: Long) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, boolean), ((x: Double, y: Float) => x < y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, boolean), ((x: Double, y: Double) => x < y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "&" -> Seq(
+      (Seq(boolean, boolean, boolean), ((x: Boolean, y: Boolean) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, byte, int), ((x: Byte, y: Byte) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, int), ((x: Byte, y: Short) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, int), ((x: Byte, y: Char) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, long), ((x: Byte, y: Long) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, int), ((x: Short, y: Byte) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, int), ((x: Short, y: Short) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, int), ((x: Short, y: Char) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, long), ((x: Short, y: Long) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, int), ((x: Char, y: Byte) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, int), ((x: Char, y: Short) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, int), ((x: Char, y: Char) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, long), ((x: Char, y: Long) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, int), ((x: Int, y: Byte) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, int), ((x: Int, y: Short) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, int), ((x: Int, y: Char) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, long), ((x: Int, y: Long) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, long), ((x: Long, y: Byte) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, long), ((x: Long, y: Short) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, long), ((x: Long, y: Char) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x & y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x & y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "<<" -> Seq(
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, int), ((x: Byte, y: Long) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, int), ((x: Short, y: Long) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, int), ((x: Char, y: Long) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, int), ((x: Int, y: Long) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x << y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x << y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "||" -> Seq(
+      (Seq(boolean, boolean, boolean), ((x: Boolean, y: Boolean) => x || y).asInstanceOf[(Any, Any) => Any])
+    ),
+    ">=" -> Seq(
+      (Seq(byte, byte, boolean), ((x: Byte, y: Byte) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, boolean), ((x: Byte, y: Short) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, boolean), ((x: Byte, y: Char) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, boolean), ((x: Byte, y: Int) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, boolean), ((x: Byte, y: Long) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, boolean), ((x: Byte, y: Float) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, boolean), ((x: Byte, y: Double) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, boolean), ((x: Short, y: Byte) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, boolean), ((x: Short, y: Short) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, boolean), ((x: Short, y: Char) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, boolean), ((x: Short, y: Int) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, boolean), ((x: Short, y: Long) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, boolean), ((x: Short, y: Float) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, boolean), ((x: Short, y: Double) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, boolean), ((x: Char, y: Byte) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, boolean), ((x: Char, y: Short) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, boolean), ((x: Char, y: Char) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, boolean), ((x: Char, y: Int) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, boolean), ((x: Char, y: Long) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, boolean), ((x: Char, y: Float) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, boolean), ((x: Char, y: Double) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, boolean), ((x: Int, y: Byte) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, boolean), ((x: Int, y: Short) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, boolean), ((x: Int, y: Char) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, boolean), ((x: Int, y: Int) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, boolean), ((x: Int, y: Long) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, boolean), ((x: Int, y: Float) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, boolean), ((x: Int, y: Double) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, boolean), ((x: Long, y: Byte) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, boolean), ((x: Long, y: Short) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, boolean), ((x: Long, y: Char) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, boolean), ((x: Long, y: Int) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, boolean), ((x: Long, y: Long) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, boolean), ((x: Long, y: Float) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, boolean), ((x: Long, y: Double) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, boolean), ((x: Float, y: Byte) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, boolean), ((x: Float, y: Short) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, boolean), ((x: Float, y: Char) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, boolean), ((x: Float, y: Int) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, boolean), ((x: Float, y: Long) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, boolean), ((x: Float, y: Float) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, boolean), ((x: Float, y: Double) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, boolean), ((x: Double, y: Byte) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, boolean), ((x: Double, y: Short) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, boolean), ((x: Double, y: Char) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, boolean), ((x: Double, y: Int) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, boolean), ((x: Double, y: Long) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, boolean), ((x: Double, y: Float) => x >= y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, boolean), ((x: Double, y: Double) => x >= y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "|" -> Seq(
+      (Seq(boolean, boolean, boolean), ((x: Boolean, y: Boolean) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, byte, int), ((x: Byte, y: Byte) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, int), ((x: Byte, y: Short) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, int), ((x: Byte, y: Char) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, long), ((x: Byte, y: Long) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, int), ((x: Short, y: Byte) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, int), ((x: Short, y: Short) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, int), ((x: Short, y: Char) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, long), ((x: Short, y: Long) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, int), ((x: Char, y: Byte) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, int), ((x: Char, y: Short) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, int), ((x: Char, y: Char) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, long), ((x: Char, y: Long) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, int), ((x: Int, y: Byte) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, int), ((x: Int, y: Short) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, int), ((x: Int, y: Char) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, long), ((x: Int, y: Long) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, long), ((x: Long, y: Byte) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, long), ((x: Long, y: Short) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, long), ((x: Long, y: Char) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x | y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x | y).asInstanceOf[(Any, Any) => Any])
+    ),
+    ">>" -> Seq(
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, int), ((x: Byte, y: Long) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, int), ((x: Short, y: Long) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, int), ((x: Char, y: Long) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, int), ((x: Int, y: Long) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x >> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x >> y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "-" -> Seq(
+      (Seq(byte, byte, int), ((x: Byte, y: Byte) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, int), ((x: Byte, y: Short) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, int), ((x: Byte, y: Char) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, long), ((x: Byte, y: Long) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, float), ((x: Byte, y: Float) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, double), ((x: Byte, y: Double) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, int), ((x: Short, y: Byte) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, int), ((x: Short, y: Short) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, int), ((x: Short, y: Char) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, long), ((x: Short, y: Long) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, float), ((x: Short, y: Float) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, double), ((x: Short, y: Double) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, int), ((x: Char, y: Byte) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, int), ((x: Char, y: Short) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, int), ((x: Char, y: Char) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, long), ((x: Char, y: Long) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, float), ((x: Char, y: Float) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, double), ((x: Char, y: Double) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, int), ((x: Int, y: Byte) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, int), ((x: Int, y: Short) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, int), ((x: Int, y: Char) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, long), ((x: Int, y: Long) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, float), ((x: Int, y: Float) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, double), ((x: Int, y: Double) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, long), ((x: Long, y: Byte) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, long), ((x: Long, y: Short) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, long), ((x: Long, y: Char) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, float), ((x: Long, y: Float) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, double), ((x: Long, y: Double) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, float), ((x: Float, y: Byte) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, float), ((x: Float, y: Short) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, float), ((x: Float, y: Char) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, float), ((x: Float, y: Int) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, float), ((x: Float, y: Long) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, float), ((x: Float, y: Float) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, double), ((x: Float, y: Double) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, double), ((x: Double, y: Byte) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, double), ((x: Double, y: Short) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, double), ((x: Double, y: Char) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, double), ((x: Double, y: Int) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, double), ((x: Double, y: Long) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, double), ((x: Double, y: Float) => x - y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, double), ((x: Double, y: Double) => x - y).asInstanceOf[(Any, Any) => Any])
+    ),
+    ">>>" -> Seq(
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, int), ((x: Byte, y: Long) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, int), ((x: Short, y: Long) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, int), ((x: Char, y: Long) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, int), ((x: Int, y: Long) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x >>> y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x >>> y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "==" -> Seq(
+      (Seq(boolean, boolean, boolean), ((x: Boolean, y: Boolean) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, byte, boolean), ((x: Byte, y: Byte) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, boolean), ((x: Byte, y: Short) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, boolean), ((x: Byte, y: Char) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, boolean), ((x: Byte, y: Int) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, boolean), ((x: Byte, y: Long) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, boolean), ((x: Byte, y: Float) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, boolean), ((x: Byte, y: Double) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, boolean), ((x: Short, y: Byte) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, boolean), ((x: Short, y: Short) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, boolean), ((x: Short, y: Char) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, boolean), ((x: Short, y: Int) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, boolean), ((x: Short, y: Long) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, boolean), ((x: Short, y: Float) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, boolean), ((x: Short, y: Double) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, boolean), ((x: Char, y: Byte) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, boolean), ((x: Char, y: Short) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, boolean), ((x: Char, y: Char) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, boolean), ((x: Char, y: Int) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, boolean), ((x: Char, y: Long) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, boolean), ((x: Char, y: Float) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, boolean), ((x: Char, y: Double) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, boolean), ((x: Int, y: Byte) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, boolean), ((x: Int, y: Short) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, boolean), ((x: Int, y: Char) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, boolean), ((x: Int, y: Int) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, boolean), ((x: Int, y: Long) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, boolean), ((x: Int, y: Float) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, boolean), ((x: Int, y: Double) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, boolean), ((x: Long, y: Byte) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, boolean), ((x: Long, y: Short) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, boolean), ((x: Long, y: Char) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, boolean), ((x: Long, y: Int) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, boolean), ((x: Long, y: Long) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, boolean), ((x: Long, y: Float) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, boolean), ((x: Long, y: Double) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, boolean), ((x: Float, y: Byte) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, boolean), ((x: Float, y: Short) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, boolean), ((x: Float, y: Char) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, boolean), ((x: Float, y: Int) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, boolean), ((x: Float, y: Long) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, boolean), ((x: Float, y: Float) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, boolean), ((x: Float, y: Double) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, boolean), ((x: Double, y: Byte) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, boolean), ((x: Double, y: Short) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, boolean), ((x: Double, y: Char) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, boolean), ((x: Double, y: Int) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, boolean), ((x: Double, y: Long) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, boolean), ((x: Double, y: Float) => x == y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, boolean), ((x: Double, y: Double) => x == y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "+" -> Seq(
+      (Seq(byte, byte, int), ((x: Byte, y: Byte) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, int), ((x: Byte, y: Short) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, int), ((x: Byte, y: Char) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, long), ((x: Byte, y: Long) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, float), ((x: Byte, y: Float) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, double), ((x: Byte, y: Double) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, int), ((x: Short, y: Byte) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, int), ((x: Short, y: Short) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, int), ((x: Short, y: Char) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, long), ((x: Short, y: Long) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, float), ((x: Short, y: Float) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, double), ((x: Short, y: Double) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, int), ((x: Char, y: Byte) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, int), ((x: Char, y: Short) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, int), ((x: Char, y: Char) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, long), ((x: Char, y: Long) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, float), ((x: Char, y: Float) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, double), ((x: Char, y: Double) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, int), ((x: Int, y: Byte) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, int), ((x: Int, y: Short) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, int), ((x: Int, y: Char) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, long), ((x: Int, y: Long) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, float), ((x: Int, y: Float) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, double), ((x: Int, y: Double) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, long), ((x: Long, y: Byte) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, long), ((x: Long, y: Short) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, long), ((x: Long, y: Char) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, float), ((x: Long, y: Float) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, double), ((x: Long, y: Double) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, float), ((x: Float, y: Byte) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, float), ((x: Float, y: Short) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, float), ((x: Float, y: Char) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, float), ((x: Float, y: Int) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, float), ((x: Float, y: Long) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, float), ((x: Float, y: Float) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, double), ((x: Float, y: Double) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, double), ((x: Double, y: Byte) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, double), ((x: Double, y: Short) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, double), ((x: Double, y: Char) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, double), ((x: Double, y: Int) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, double), ((x: Double, y: Long) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, double), ((x: Double, y: Float) => x + y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, double), ((x: Double, y: Double) => x + y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "!=" -> Seq(
+      (Seq(boolean, boolean, boolean), ((x: Boolean, y: Boolean) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, byte, boolean), ((x: Byte, y: Byte) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, boolean), ((x: Byte, y: Short) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, boolean), ((x: Byte, y: Char) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, boolean), ((x: Byte, y: Int) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, boolean), ((x: Byte, y: Long) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, boolean), ((x: Byte, y: Float) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, boolean), ((x: Byte, y: Double) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, boolean), ((x: Short, y: Byte) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, boolean), ((x: Short, y: Short) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, boolean), ((x: Short, y: Char) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, boolean), ((x: Short, y: Int) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, boolean), ((x: Short, y: Long) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, boolean), ((x: Short, y: Float) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, boolean), ((x: Short, y: Double) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, boolean), ((x: Char, y: Byte) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, boolean), ((x: Char, y: Short) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, boolean), ((x: Char, y: Char) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, boolean), ((x: Char, y: Int) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, boolean), ((x: Char, y: Long) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, boolean), ((x: Char, y: Float) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, boolean), ((x: Char, y: Double) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, boolean), ((x: Int, y: Byte) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, boolean), ((x: Int, y: Short) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, boolean), ((x: Int, y: Char) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, boolean), ((x: Int, y: Int) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, boolean), ((x: Int, y: Long) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, boolean), ((x: Int, y: Float) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, boolean), ((x: Int, y: Double) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, boolean), ((x: Long, y: Byte) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, boolean), ((x: Long, y: Short) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, boolean), ((x: Long, y: Char) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, boolean), ((x: Long, y: Int) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, boolean), ((x: Long, y: Long) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, boolean), ((x: Long, y: Float) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, boolean), ((x: Long, y: Double) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, boolean), ((x: Float, y: Byte) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, boolean), ((x: Float, y: Short) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, boolean), ((x: Float, y: Char) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, boolean), ((x: Float, y: Int) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, boolean), ((x: Float, y: Long) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, boolean), ((x: Float, y: Float) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, boolean), ((x: Float, y: Double) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, boolean), ((x: Double, y: Byte) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, boolean), ((x: Double, y: Short) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, boolean), ((x: Double, y: Char) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, boolean), ((x: Double, y: Int) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, boolean), ((x: Double, y: Long) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, boolean), ((x: Double, y: Float) => x != y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, boolean), ((x: Double, y: Double) => x != y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "&&" -> Seq(
+      (Seq(boolean, boolean, boolean), ((x: Boolean, y: Boolean) => x && y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "^" -> Seq(
+      (Seq(boolean, boolean, boolean), ((x: Boolean, y: Boolean) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, byte, int), ((x: Byte, y: Byte) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, int), ((x: Byte, y: Short) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, int), ((x: Byte, y: Char) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, long), ((x: Byte, y: Long) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, int), ((x: Short, y: Byte) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, int), ((x: Short, y: Short) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, int), ((x: Short, y: Char) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, long), ((x: Short, y: Long) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, int), ((x: Char, y: Byte) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, int), ((x: Char, y: Short) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, int), ((x: Char, y: Char) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, long), ((x: Char, y: Long) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, int), ((x: Int, y: Byte) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, int), ((x: Int, y: Short) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, int), ((x: Int, y: Char) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, long), ((x: Int, y: Long) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, long), ((x: Long, y: Byte) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, long), ((x: Long, y: Short) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, long), ((x: Long, y: Char) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x ^ y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x ^ y).asInstanceOf[(Any, Any) => Any])
+    ),
+    "/" -> Seq(
+      (Seq(byte, byte, int), ((x: Byte, y: Byte) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, int), ((x: Byte, y: Short) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, int), ((x: Byte, y: Char) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, int), ((x: Byte, y: Int) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, long), ((x: Byte, y: Long) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, float), ((x: Byte, y: Float) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, double), ((x: Byte, y: Double) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, int), ((x: Short, y: Byte) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, int), ((x: Short, y: Short) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, int), ((x: Short, y: Char) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, int), ((x: Short, y: Int) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, long), ((x: Short, y: Long) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, float), ((x: Short, y: Float) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, double), ((x: Short, y: Double) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, int), ((x: Char, y: Byte) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, int), ((x: Char, y: Short) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, int), ((x: Char, y: Char) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, int), ((x: Char, y: Int) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, long), ((x: Char, y: Long) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, float), ((x: Char, y: Float) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, double), ((x: Char, y: Double) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, int), ((x: Int, y: Byte) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, int), ((x: Int, y: Short) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, int), ((x: Int, y: Char) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, int), ((x: Int, y: Int) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, long), ((x: Int, y: Long) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, float), ((x: Int, y: Float) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, double), ((x: Int, y: Double) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, long), ((x: Long, y: Byte) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, long), ((x: Long, y: Short) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, long), ((x: Long, y: Char) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, long), ((x: Long, y: Int) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, long), ((x: Long, y: Long) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, float), ((x: Long, y: Float) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, double), ((x: Long, y: Double) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, float), ((x: Float, y: Byte) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, float), ((x: Float, y: Short) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, float), ((x: Float, y: Char) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, float), ((x: Float, y: Int) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, float), ((x: Float, y: Long) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, float), ((x: Float, y: Float) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, double), ((x: Float, y: Double) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, double), ((x: Double, y: Byte) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, double), ((x: Double, y: Short) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, double), ((x: Double, y: Char) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, double), ((x: Double, y: Int) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, double), ((x: Double, y: Long) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, double), ((x: Double, y: Float) => x / y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, double), ((x: Double, y: Double) => x / y).asInstanceOf[(Any, Any) => Any])
+    ),
+    ">" -> Seq(
+      (Seq(byte, byte, boolean), ((x: Byte, y: Byte) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, short, boolean), ((x: Byte, y: Short) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, char, boolean), ((x: Byte, y: Char) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, int, boolean), ((x: Byte, y: Int) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, long, boolean), ((x: Byte, y: Long) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, float, boolean), ((x: Byte, y: Float) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(byte, double, boolean), ((x: Byte, y: Double) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, byte, boolean), ((x: Short, y: Byte) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, short, boolean), ((x: Short, y: Short) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, char, boolean), ((x: Short, y: Char) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, int, boolean), ((x: Short, y: Int) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, long, boolean), ((x: Short, y: Long) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, float, boolean), ((x: Short, y: Float) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(short, double, boolean), ((x: Short, y: Double) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, byte, boolean), ((x: Char, y: Byte) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, short, boolean), ((x: Char, y: Short) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, char, boolean), ((x: Char, y: Char) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, int, boolean), ((x: Char, y: Int) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, long, boolean), ((x: Char, y: Long) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, float, boolean), ((x: Char, y: Float) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(char, double, boolean), ((x: Char, y: Double) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, byte, boolean), ((x: Int, y: Byte) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, short, boolean), ((x: Int, y: Short) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, char, boolean), ((x: Int, y: Char) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, int, boolean), ((x: Int, y: Int) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, long, boolean), ((x: Int, y: Long) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, float, boolean), ((x: Int, y: Float) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(int, double, boolean), ((x: Int, y: Double) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, byte, boolean), ((x: Long, y: Byte) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, short, boolean), ((x: Long, y: Short) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, char, boolean), ((x: Long, y: Char) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, int, boolean), ((x: Long, y: Int) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, long, boolean), ((x: Long, y: Long) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, float, boolean), ((x: Long, y: Float) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(long, double, boolean), ((x: Long, y: Double) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, byte, boolean), ((x: Float, y: Byte) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, short, boolean), ((x: Float, y: Short) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, char, boolean), ((x: Float, y: Char) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, int, boolean), ((x: Float, y: Int) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, long, boolean), ((x: Float, y: Long) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, float, boolean), ((x: Float, y: Float) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(float, double, boolean), ((x: Float, y: Double) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, byte, boolean), ((x: Double, y: Byte) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, short, boolean), ((x: Double, y: Short) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, char, boolean), ((x: Double, y: Char) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, int, boolean), ((x: Double, y: Int) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, long, boolean), ((x: Double, y: Long) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, float, boolean), ((x: Double, y: Float) => x > y).asInstanceOf[(Any, Any) => Any]),
+      (Seq(double, double, boolean), ((x: Double, y: Double) => x > y).asInstanceOf[(Any, Any) => Any])
+    )
+  )
+
+  val allOps = (unaryOps.keys.toSeq ++ binaryOps.keys.toSeq).sorted
+
+  val opIds = allOps.zipWithIndex.toMap
 
   def genUtil(): String = """
     |trait Util {
@@ -889,7 +923,6 @@ object TestGen {
     |      succs += 1
     |    }
     |  }
-    |  def test(s: String)(f: => Unit): Unit = f
     |}""".stripMargin
 
   def genSamples(): String = {
@@ -901,9 +934,8 @@ object TestGen {
       case (ty, values) =>
         values.zipWithIndex.foreach {
           case (value, i) =>
-            emit(s"  final val val$ty$i = $value")
-            emit(s"  @noinline def noinline$ty$i : $ty = $value")
-            emit(s"  @inline def inline$ty$i : $ty = $value")
+            emit(s"  @noinline def noinline$ty$i : $ty = ${genValue(ty, value)}")
+            emit(s"  @inline def inline$ty$i : $ty = ${genValue(ty, value)}")
         }
     }
 
@@ -911,123 +943,182 @@ object TestGen {
     emit.toString
   }
 
-  def genUnaryOpOverload(emit: Emit, op: Op, n: Int, argty: Type, retty: Type): Seq[String] = {
-    def genTest(i: Int, variant1: Variant, variant2: Variant) = {
-      val name = s"test_${n}_${i}_${variant1}_${variant2}"
-      emit(s"  def $name : Unit = {")
-      emit(s"    val _$variant1 = $variant1$argty$i.$op")
-      emit(s"    val _$variant2 = $variant2$argty$i.$op")
-      emit(s"    check(_$variant1 == _$variant2)")
-      emit("  }")
+  def genValue(ty: Type, value: Any): String = ty match {
+    case "Boolean" => value.toString
+    case "Byte" => s"$value.toByte"
+    case "Short" => s"$value.toShort"
+    case "Char" => s"${value.asInstanceOf[Char].toInt}.toChar"
+    case "Int"  => value.toString
+    case "Long" => s"${value}L"
+    case "Float" =>
+      val v = value.asInstanceOf[Float]
+      if (java.lang.Float.isNaN(v)) {
+        s"java.lang.Float.NaN"
+      } else {
+        s"java.lang.Float.intBitsToFloat(${java.lang.Float.floatToRawIntBits(v)})"
+      }
+    case "Double" =>
+      val v = value.asInstanceOf[Double]
+      if (java.lang.Double.isNaN(v)) {
+        s"java.lang.Double.NaN"
+      } else {
+        s"java.lang.Double.longBitsToDouble(${java.lang.Double.doubleToRawLongBits(v)}L)"
+      }
+  }
+
+  def genCheck(expr: String, ty: Type, f: () => Any): String = {
+    try {
+      f() match {
+        case result: Float if java.lang.Float.isNaN(result) =>
+          s"check(java.lang.Float.isNaN($expr))"
+        case result: Double if java.lang.Double.isNaN(result) =>
+          s"check(java.lang.Double.isNaN($expr))"
+        case result =>
+          s"check(($expr) == ${genValue(ty, result)})"
+      }
+    } catch {
+      case _: ArithmeticException =>
+        s"throws($expr)"
+    }
+  }
+
+  def genUnaryOpOverload(emit: Emit, op: Op, overloadId: Int, argty: Type, retty: Type, f: Any => Any): Seq[String] = {
+    def genTest(lsample: Any, i: Int, prefix: String): String = {
+      val name = s"test_${opIds(op)}_${overloadId}_${i}_$prefix"
+      val check = genCheck(s"$prefix$argty$i.$op", retty, () => f(lsample))
+      emit(s"  def $name = $check")
       name
     }
 
     samples(argty).zipWithIndex.flatMap {
-      case (_, i) =>
-        Seq(genTest(i, "val", "inline"),
-            genTest(i, "val", "noinline"))
+      case (lsample, i) =>
+        Seq(genTest(lsample, i, "inline"),
+            genTest(lsample, i, "noinline"))
     }
   }
 
-  def genBinaryOpOverload(emit: Emit, op: Op, n: Int, arg1ty: Type, arg2ty: Type, retty: Type): Seq[String] = {
-    def genCheckTest(i: Int, j: Int, variant1: Variant, variant2: Variant) = {
-      val name = s"test_${n}_${i}_${j}_${variant1}_${variant2}"
-      emit(s"  def $name : Unit = {")
-      emit(s"    val _$variant1 = $variant1$arg1ty$i $op $variant1$arg2ty$j")
-      emit(s"    val _$variant2 = $variant2$arg1ty$i $op $variant2$arg2ty$j")
-      emit(s"    check(_$variant1 == _$variant2)")
-      emit("  }")
+  def genBinaryOpOverload(emit: Emit, op: String, overloadId: Int, arg1ty: Type, arg2ty: Type, retty: Type, f: (Any, Any) => Any): Seq[String] = {
+    def genTest(lsample: Any, i: Int, rsample: Any, j: Int, prefix: String): String = {
+      val name = s"test_${opIds(op)}_${overloadId}_${i}_${j}_$prefix"
+      val check = genCheck(s"$prefix$arg1ty$i $op $prefix$arg2ty$j", retty, () => f(lsample, rsample))
+      emit(s"  def $name = $check")
       name
     }
 
-    def genThrowsTest(i: Int, j: Int, variant: Variant) = {
-      val name = s"test_${n}_${i}_${j}_${variant}"
-      emit(s"  def $name : Unit = {")
-      emit(s"    throws($variant$arg1ty$i $op $variant$arg2ty$j)")
-      emit("  }")
-      name
-    }
+    val tests = mutable.UnrolledBuffer.empty[String]
 
     samples(arg1ty).zipWithIndex.flatMap {
-      case (_, i) =>
+      case (lsample, i) =>
         samples(arg2ty).zipWithIndex.flatMap {
           case (rsample, j) =>
-            if (isDiv(op) && isZero(rsample)) {
-              Seq(genThrowsTest(i, j, "val"),
-                  genThrowsTest(i, j, "inline"),
-                  genThrowsTest(i, j, "noinline"))
-            } else {
-              Seq(genCheckTest(i, j, "val", "inline"),
-                  genCheckTest(i, j, "val", "noinline"))
-            }
+            tests += genTest(lsample, i, rsample, j, "inline")
+            tests += genTest(lsample, i, rsample, j, "noinline")
         }
     }
+
+    if (tests.nonEmpty) {
+      val name = s"test_${opIds(op)}_${overloadId}"
+      emit(s"  def $name = {")
+      tests.foreach { test =>
+        emit("    " + test)
+      }
+      emit("  }")
+      Seq(name)
+    } else {
+      Seq()
+    }
+
   }
 
-  def genOpOverload(emit: Emit, op: Op, n: Int, overload: Overload): Seq[String] = overload match {
-    case Seq(argty, retty) =>
-      genUnaryOpOverload(emit, op, n, argty, retty)
-    case Seq(arg1ty, arg2ty, retty) =>
-      genBinaryOpOverload(emit, op, n, arg1ty, arg2ty, retty)
+  def genOpOverloads(emit: Emit, ownerty: Type, op: Op): Seq[String] = {
+    println(s"genOpOverloads($ownerty, $op)")
+    val tests = mutable.UnrolledBuffer.empty[String]
+
+    if (unaryOps.contains(op)) {
+      unaryOps(op).zipWithIndex.foreach {
+        case ((Seq(argty, retty), f), overloadId) if argty == ownerty =>
+          println(s"genOpOverload($ownerty, $op) @ ($argty, $retty)")
+          tests ++= genUnaryOpOverload(emit, op, overloadId, argty, retty, f)
+        case _ =>
+          ()
+      }
+    } else if (binaryOps.contains(op)) {
+      binaryOps(op).zipWithIndex.foreach {
+        case ((Seq(arg1ty, arg2ty, retty), f), overloadId) if arg1ty == ownerty =>
+          println(s"genOpOverload($ownerty, $op) @ ($arg1ty, $arg2ty, $retty))")
+          tests ++= genBinaryOpOverload(emit, op, overloadId, arg1ty, arg2ty, retty, f)
+        case _ =>
+          ()
+      }
+    }
+
+    if (tests.nonEmpty) {
+      val name = s"test_${opIds(op)}"
+      emit(s"  def $name = {")
+      tests.foreach { test =>
+        emit("    " + test)
+      }
+      emit("  }")
+      Seq(name)
+    } else {
+      Seq()
+    }
   }
 
   def genTypeOp(ownerty: Type, op: Op): (String, String) = {
-    val name = s"Test_${ownerty}_$op"
+    println(s"genTypeOp($ownerty, $op)")
+
+    val name = s"Test${ownerty}${opNames(op)}"
 
     val emit = new Emit
-    val tests = mutable.UnrolledBuffer.empty[String]
 
     emit("import Samples._")
     emit(s"object $name extends Util {")
 
-    ops(op).zipWithIndex.foreach {
-      case (overload, n) =>
-        if (overload.head == ownerty) {
-          tests ++= genOpOverload(emit, op, n, overload)
-        }
-    }
-
-    ops(op).zipWithIndex.foreach {
-      case (_, n) =>
-        emit(s"  def test_$n : Unit = {")
-        tests.foreach { test =>
-          if (test.startsWith(s"test_${n}_")) {
-            emit(s"    $test")
-          }
-        }
-        emit("  }")
-    }
+    val tests = genOpOverloads(emit, ownerty, op)
 
     emit("  def run : Unit = {")
-    ops(op).zipWithIndex.foreach {
-      case (_, n) =>
-        emit(s"    test_$n")
+    tests.foreach { test =>
+      emit("    " + test)
     }
-    emit(s"""    println(s"Score for $name: $$succs out of $$checks")""")
+    emit(s"""    println(s"Score for $name: $$succs out of $$checks (ok? $${succs == checks})")""")
     emit("  }")
     emit("}")
 
     (name + ".scala", emit.toString)
   }
 
+  val typeOps: Seq[(Type, Op)] = {
+    val unaryTypeOps = unaryOps.toSeq.flatMap {
+      case (op, overloads) =>
+        overloads.map {
+          case (overload, f) =>
+            (overload.head, op)
+        }
+    }.distinct
+    val binaryTypeOps = binaryOps.toSeq.flatMap {
+      case (op, overloads) =>
+        overloads.map {
+          case (overload, f) =>
+            (overload.head, op)
+        }
+    }.distinct
+    unaryTypeOps ++ binaryTypeOps
+  }
+
   def genMain(): String = {
     val emit = new Emit
 
     emit("object Main extends App {")
+
     typeOps.foreach {
       case (ownerty, op) =>
-        emit(s"  Test_${ownerty}_$op.run")
+        emit(s"  Test${ownerty}${opNames(op)}.run")
     }
+
     emit("}")
     emit.toString
   }
-
-  val typeOps: Seq[(Type, Op)] = ops.toSeq.flatMap {
-    case (op, overloads) =>
-      overloads.map { overload =>
-        (overload.head, op)
-      }
-  }.distinct
 
   def gen(): Seq[(String, String)] = {
     val out = mutable.UnrolledBuffer.empty[(String, String)]
