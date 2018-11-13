@@ -896,15 +896,8 @@ object TestGen {
     |trait Util {
     |  var succs  = 0
     |  var checks = 0
-    |  def check(cond: => Boolean): Unit = {
+    |  def check(succ: Boolean): Unit = {
     |    checks += 1
-    |    val succ =
-    |      try {
-    |        cond
-    |      } catch {
-    |        case _: ArithmeticException =>
-    |          false
-    |      }
     |    if (succ) {
     |      succs += 1
     |    }
