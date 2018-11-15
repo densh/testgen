@@ -132,14 +132,6 @@ object TestGen {
     )
   )
 
-  // val convOps = {
-  //   val overloads =
-  //     Seq(byte, short, char, int, long, double).foreach {
-  //       Seq(byte, short, char, int, long, double).foreach {
-  //       }
-  //     }
-  // }
-
   val opNames = Map[String, String](
     ("unary_!", "Not"),
     ("unary_~", "BitwiseNot") ,
@@ -165,7 +157,11 @@ object TestGen {
     ("/", "Divide"),
     (">", "Greater"),
     ("!=", "NotEquals")
-  )
+  ) ++ {
+    Seq("toByte", "toShort", "toChar", "toInt", "toLong", "toFloat", "toDouble").map { conv =>
+      (conv, conv.capitalize)
+    }
+  }
 
   val unaryOps = Map[Op, Seq[UnaryOverload]](
     "unary_!" -> Seq(
@@ -193,6 +189,69 @@ object TestGen {
       (Seq(int, int), ((x: Int) => x.unary_-).asInstanceOf[Any => Any]),
       (Seq(float, float), ((x: Float) => x.unary_-).asInstanceOf[Any => Any]),
       (Seq(double, double), ((x: Double) => x.unary_-).asInstanceOf[Any => Any])
+    ),
+    "toByte" -> Seq(
+      (Seq(byte, byte), ((x: Byte) => x.toByte).asInstanceOf[Any => Any]),
+      (Seq(short, byte), ((x: Short) => x.toByte).asInstanceOf[Any => Any]),
+      (Seq(char, byte), ((x: Char) => x.toByte).asInstanceOf[Any => Any]),
+      (Seq(int, byte), ((x: Int) => x.toByte).asInstanceOf[Any => Any]),
+      (Seq(long, byte), ((x: Long) => x.toByte).asInstanceOf[Any => Any]),
+      (Seq(float, byte), ((x: Float) => x.toByte).asInstanceOf[Any => Any]),
+      (Seq(double, byte), ((x: Double) => x.toByte).asInstanceOf[Any => Any])
+    ),
+    "toShort" -> Seq(
+      (Seq(byte, short), ((x: Byte) => x.toShort).asInstanceOf[Any => Any]),
+      (Seq(short, short), ((x: Short) => x.toShort).asInstanceOf[Any => Any]),
+      (Seq(char, short), ((x: Char) => x.toShort).asInstanceOf[Any => Any]),
+      (Seq(int, short), ((x: Int) => x.toShort).asInstanceOf[Any => Any]),
+      (Seq(long, short), ((x: Long) => x.toShort).asInstanceOf[Any => Any]),
+      (Seq(float, short), ((x: Float) => x.toShort).asInstanceOf[Any => Any]),
+      (Seq(double, short), ((x: Double) => x.toShort).asInstanceOf[Any => Any])
+    ),
+    "toChar" -> Seq(
+      (Seq(byte, char), ((x: Byte) => x.toChar).asInstanceOf[Any => Any]),
+      (Seq(short, char), ((x: Short) => x.toChar).asInstanceOf[Any => Any]),
+      (Seq(char, char), ((x: Char) => x.toChar).asInstanceOf[Any => Any]),
+      (Seq(int, char), ((x: Int) => x.toChar).asInstanceOf[Any => Any]),
+      (Seq(long, char), ((x: Long) => x.toChar).asInstanceOf[Any => Any]),
+      (Seq(float, char), ((x: Float) => x.toChar).asInstanceOf[Any => Any]),
+      (Seq(double, char), ((x: Double) => x.toChar).asInstanceOf[Any => Any])
+    ),
+    "toInt" -> Seq(
+      (Seq(byte, int), ((x: Byte) => x.toInt).asInstanceOf[Any => Any]),
+      (Seq(short, int), ((x: Short) => x.toInt).asInstanceOf[Any => Any]),
+      (Seq(char, int), ((x: Char) => x.toInt).asInstanceOf[Any => Any]),
+      (Seq(int, int), ((x: Int) => x.toInt).asInstanceOf[Any => Any]),
+      (Seq(long, int), ((x: Long) => x.toInt).asInstanceOf[Any => Any]),
+      (Seq(float, int), ((x: Float) => x.toInt).asInstanceOf[Any => Any]),
+      (Seq(double, int), ((x: Double) => x.toInt).asInstanceOf[Any => Any])
+    ),
+    "toLong" -> Seq(
+      (Seq(byte, long), ((x: Byte) => x.toLong).asInstanceOf[Any => Any]),
+      (Seq(short, long), ((x: Short) => x.toLong).asInstanceOf[Any => Any]),
+      (Seq(char, long), ((x: Char) => x.toLong).asInstanceOf[Any => Any]),
+      (Seq(int, long), ((x: Int) => x.toLong).asInstanceOf[Any => Any]),
+      (Seq(long, long), ((x: Long) => x.toLong).asInstanceOf[Any => Any]),
+      (Seq(float, long), ((x: Float) => x.toLong).asInstanceOf[Any => Any]),
+      (Seq(double, long), ((x: Double) => x.toLong).asInstanceOf[Any => Any])
+    ),
+    "toFloat" -> Seq(
+      (Seq(byte, float), ((x: Byte) => x.toFloat).asInstanceOf[Any => Any]),
+      (Seq(short, float), ((x: Short) => x.toFloat).asInstanceOf[Any => Any]),
+      (Seq(char, float), ((x: Char) => x.toFloat).asInstanceOf[Any => Any]),
+      (Seq(int, float), ((x: Int) => x.toFloat).asInstanceOf[Any => Any]),
+      (Seq(long, float), ((x: Long) => x.toFloat).asInstanceOf[Any => Any]),
+      (Seq(float, float), ((x: Float) => x.toFloat).asInstanceOf[Any => Any]),
+      (Seq(double, float), ((x: Double) => x.toFloat).asInstanceOf[Any => Any])
+    ),
+    "toDouble" -> Seq(
+      (Seq(byte, double), ((x: Byte) => x.toDouble).asInstanceOf[Any => Any]),
+      (Seq(short, double), ((x: Short) => x.toDouble).asInstanceOf[Any => Any]),
+      (Seq(char, double), ((x: Char) => x.toDouble).asInstanceOf[Any => Any]),
+      (Seq(int, double), ((x: Int) => x.toDouble).asInstanceOf[Any => Any]),
+      (Seq(long, double), ((x: Long) => x.toDouble).asInstanceOf[Any => Any]),
+      (Seq(float, double), ((x: Float) => x.toDouble).asInstanceOf[Any => Any]),
+      (Seq(double, double), ((x: Double) => x.toDouble).asInstanceOf[Any => Any])
     )
   )
 
